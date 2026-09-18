@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-# disaster-nlp-transformer
-=======
-﻿---
+---
 title: Responde NLP Classifier
-emoji: 🤖
+emoji: 🚨
 colorFrom: blue
 colorTo: green
 sdk: docker
@@ -40,6 +37,8 @@ Fine-tuned on a Tagalog disaster-response dataset using `jcblaise/roberta-tagalo
   "intent_confidence": 0.9821,
   "urgency_confidence": 0.8743,
   "incident_type_confidence": 0.9612,
+  "needs_review": false,
+  "low_confidence_fields": [],
   "barangay": "Banga",
   "contact_numbers": []
 }
@@ -59,4 +58,3 @@ To deploy with weights, either:
 pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 7860 --reload
 ```
->>>>>>> master
