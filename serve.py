@@ -133,10 +133,19 @@ def load_model():
                 lm = json.load(f)
                 if "id2intent" in lm:
                     _id2intent = {int(k): v for k, v in lm["id2intent"].items()}
+                elif "intent" in lm and "id2label" in lm["intent"]:
+                    _id2intent = {int(k): v for k, v in lm["intent"]["id2label"].items()}
+
                 if "id2urgency" in lm:
                     _id2urgency = {int(k): v for k, v in lm["id2urgency"].items()}
+                elif "urgency" in lm and "id2label" in lm["urgency"]:
+                    _id2urgency = {int(k): v for k, v in lm["urgency"]["id2label"].items()}
+
                 if "id2incident" in lm:
                     _id2incident = {int(k): v for k, v in lm["id2incident"].items()}
+                elif "incident_type" in lm and "id2label" in lm["incident_type"]:
+                    _id2incident = {int(k): v for k, v in lm["incident_type"]["id2label"].items()}
+
                 print(f"  Loaded label_maps.json ({len(_id2intent)} intents, {len(_id2urgency)} urgencies, {len(_id2incident)} incidents).")
         except Exception as e:
             print(f"  Could not parse label_maps.json ({e}), using default label maps.")
