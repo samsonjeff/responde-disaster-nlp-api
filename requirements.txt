@@ -1,6 +1,8 @@
-﻿torch>=2.0.0
+# Core inference server dependencies
+# Note: scikit-learn is required because app.py imports MultiTaskRoberta from train.py,
+# and train.py has a top-level import of sklearn.metrics.
+torch>=2.0.0
 transformers>=4.40.0
-datasets>=2.18.0
 scikit-learn>=1.4.0
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0

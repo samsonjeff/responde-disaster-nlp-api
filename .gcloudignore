@@ -1,3 +1,4 @@
+# Ignore git internals and build artifacts
 .git
 .gitignore
 __pycache__/
@@ -7,4 +8,14 @@ __pycache__/
 .venv/
 venv/
 env/
+
+# Exclude training-only files not needed for the inference server
+# NOTE: train.py is intentionally INCLUDED - app.py imports MultiTaskRoberta from it
 datasets/
+evaluate.py
+Responde_NLP_Train.ipynb
+serve.py
+
+# IMPORTANT: Override .gitignore which excludes model/
+# The model weights MUST be uploaded for the container to work.
+!model/
