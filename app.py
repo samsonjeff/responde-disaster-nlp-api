@@ -33,6 +33,7 @@ from typing import List, Optional
 import torch
 import torch.nn.functional as F
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import AutoConfig, AutoTokenizer
 
@@ -47,7 +48,7 @@ from train import (
     ID2INCIDENT,
 )
 
-MODEL_DIR = Path(__file__).resolve().parent / "model"
+MODEL_DIR = Path(os.getenv("MODEL_DIR", str(Path(__file__).resolve().parent / "model")))
 
 BARANGAYS = [
     "Aya", "Balas", "Banga", "Buco", "Caloocan", "Leynes", "Miranda",
@@ -114,6 +115,45 @@ _id2incident = ID2INCIDENT
 
 def load_model():
     global _model, _tokenizer, _device, _model_ok, _id2intent, _id2urgency, _id2incident
+
+    # Ensure model directory exists
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+    # If local weights are missing, check if remote download URL or HF repo was configured
+    safetensors_file = MODEL_DIR / "model.safetensors"
+    config_file = MODEL_DIR / "config.json"
+    if not (config_file.exists() and safetensors_file.exists()):
+        hf_repo = os.getenv("HF_MODEL_REPO")
+        download_url = os.getenv("MODEL_DOWNLOAD_URL")
+        if hf_repo:
+            print(f"  Fetching model weights from Hugging Face Hub: {hf_repo}...")
+            try:
+                from huggingface_hub import snapshot_download
+                snapshot_download(repo_id=hf_repo, local_dir=str(MODEL_DIR))
+                print("  Model downloaded successfully from Hugging Face Hub.")
+            except Exception as e:
+                print(f"  Failed to download from Hugging Face Hub: {e}")
+        elif download_url:
+            print(f"  Fetching model weights from URL: {download_url}...")
+            try:
+                import urllib.request
+                import tarfile
+                import zipfile
+                target_archive = MODEL_DIR / "archive_download"
+                urllib.request.urlretrieve(download_url, str(target_archive))
+                if download_url.endswith(".tar.gz") or download_url.endswith(".tgz"):
+                    with tarfile.open(target_archive, "r:gz") as tar:
+                        tar.extractall(path=MODEL_DIR)
+                elif download_url.endswith(".zip"):
+                    with zipfile.ZipFile(target_archive, "r") as z:
+                        z.extractall(path=MODEL_DIR)
+                elif download_url.endswith(".safetensors"):
+                    target_archive.rename(safetensors_file)
+                if target_archive.exists():
+                    target_archive.unlink()
+                print("  Model downloaded and unpacked successfully.")
+            except Exception as e:
+                print(f"  Failed to download weights from URL: {e}")
 
     if not (MODEL_DIR / "config.json").exists():
         print(
@@ -182,6 +222,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Enable CORS for frontend integrations (e.g. Next.js, Vite, React, mobile web)
+cors_origins_raw = os.getenv("CORS_ORIGINS", "*")
+origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins if origins != ["*"] else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Empirically calibrated confidence thresholds from test set evaluation.
 # Predictions below these cutoffs trigger human review (needs_review = True).
@@ -209,9 +260,32 @@ class ClassifyResponse(BaseModel):
     contact_numbers:          List[str] = []
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "Responde NLP Classifier API",
+        "status": "ready" if _model_ok else "model_not_loaded",
+        "model_loaded": _model_ok,
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "ready_url": "/ready",
+        "classify_url": "/classify",
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "model_loaded": _model_ok}
+
+
+@app.get("/ready")
+def ready():
+    if not _model_ok:
+        raise HTTPException(
+            status_code=503,
+            detail="Model is not ready or failed to load.",
+        )
+    return {"status": "ready", "model_loaded": True}
 
 
 @app.post("/classify", response_model=ClassifyResponse)
