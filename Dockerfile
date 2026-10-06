@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set environment variables for Python runtime & default port
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8080 \
+    PORT=8000 \
     HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir --user torch --index-url https://download.pytorch
 COPY --chown=user . .
 
 # Expose default HTTP port
-EXPOSE 8080
+EXPOSE 8000
 
-# Start FastAPI server binding to dynamic Railway $PORT with reverse-proxy header support
-CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers"]
+# Start FastAPI server binding to $PORT with reverse-proxy header support
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
