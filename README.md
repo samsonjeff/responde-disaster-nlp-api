@@ -4,30 +4,49 @@ emoji: 🚨
 colorFrom: blue
 colorTo: green
 sdk: docker
-app_port: 8080
+app_port: 8000
 pinned: false
 ---
 
 # Responde NLP Classifier
 
-FastAPI inference server for the **Responde** disaster-reporting system.
-Fine-tuned on a Tagalog disaster-response dataset using `jcblaise/roberta-tagalog-base`.
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Caddy](https://img.shields.io/badge/Caddy-22B573?style=for-the-badge&logo=caddy&logoColor=white)](https://caddyserver.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+FastAPI inference microservice for the **Responde** Incident & Disaster Management System in **Talisay, Batangas**.
+Fine-tuned on a localized Tagalog disaster dataset using `jcblaise/roberta-tagalog-base` for multi-task emergency classification.
+
+---
+
+## Production Endpoint
+
+The active production inference server is hosted on a containerized DigitalOcean Droplet behind Caddy reverse proxy:
+
+- **Base URL**: `https://responde-ml.duckdns.org`
+- **Interactive Swagger Docs**: `https://responde-ml.duckdns.org/docs`
+
+---
 
 ## Endpoints
 
 | Method | Path | Description |
-|--------|------|-------------|
+|---|---|---|
 | `GET` | `/` | Service status, health metadata, and API links |
 | `GET` | `/health` | Liveness healthcheck (`{"status":"ok","model_loaded":true}`) |
 | `GET` | `/ready` | Readiness check (returns `200` if model loaded, `503` if still loading) |
 | `POST` | `/classify` | Classifies a Tagalog disaster message |
 | `GET` | `/docs` | Interactive Swagger UI documentation |
 
+---
+
 ### `/classify` Request Body
 
 ```json
 {
-  "text": "may sunog dito sa brgy banga!"
+  "text": "may sunog po dito sa brgy banga kailangan ng bumbero agad!"
 }
 ```
 
@@ -50,68 +69,64 @@ Fine-tuned on a Tagalog disaster-response dataset using `jcblaise/roberta-tagalo
 
 ---
 
-## Deploying to Railway
+## Architecture & Hosting
 
-This repository is pre-configured with `railway.json`, an optimized CPU-only PyTorch `Dockerfile`, `.dockerignore`, and `.railwayignore`.
+The microservice runs in an optimized CPU-only PyTorch container:
 
-### Option A: Deploy via Railway CLI (Recommended for Local Weights)
-
-Since `model/model.safetensors` (~436 MB) is stored locally and gitignored from GitHub, using the Railway CLI uploads your local workspace directly to Railway's builder:
-
-1. **Login to Railway**:
-   ```bash
-   npx @railway/cli login
-   ```
-   *(Or `npx @railway/cli login --browserless` if running on a remote/headless terminal)*
-
-2. **Link or Create a Project**:
-   ```bash
-   npx @railway/cli init
-   # Or link to an existing project:
-   npx @railway/cli link
-   ```
-
-3. **Deploy**:
-   ```bash
-   npx @railway/cli up
-   ```
-   *`.railwayignore` ensures your local `model/` folder is uploaded while ignoring git history and training artifacts.*
-
-4. **Generate a Public Domain**:
-   ```bash
-   npx @railway/cli domain
-   ```
-
----
-
-### Option B: Deploy via GitHub Repository Integration
-
-If you connect the GitHub repository directly to Railway:
-
-1. Connect the GitHub repo (`samsonjeff/nlp-transformer-api`) in the Railway dashboard.
-2. Railway will automatically detect `railway.json` and build using `Dockerfile`.
-3. Provide the model weights using **one** of the following methods:
-   - **Environment Variable `HF_MODEL_REPO`**: Set to your Hugging Face repo (e.g. `your-user/responde-tagalog-roberta`).
-   - **Environment Variable `MODEL_DOWNLOAD_URL`**: Direct HTTPS download link for `model.safetensors` or zip/tar archive (e.g. from AWS S3, Cloudflare R2, Google Cloud Storage, or GitHub Release).
-   - **Railway Volume**: Attach a volume at `/app/model` and upload weights via `npx @railway/cli service files upload`.
+1. **Docker Container**:
+   - Base image: `python:3.11-slim`
+   - CPU-only PyTorch wheels (saving ~2GB image footprint)
+   - Bound locally to `127.0.0.1:8000`
+2. **Reverse Proxy & SSL**:
+   - Caddy reverse-proxies incoming HTTPS traffic to `127.0.0.1:8000`
+   - Automatic TLS certificate issuance and renewal via Let's Encrypt
+3. **Memory & Swap Shield**:
+   - Host swap space allocated as a safety ceiling against burst loads and OOM events
 
 ---
 
 ## Environment Variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8080` | Port on which FastAPI / Uvicorn binds (Railway sets this dynamically) |
-| `CORS_ORIGINS` | `*` | Comma-separated list of allowed origins (e.g. `https://responde.ph,http://localhost:3000`) |
-| `MODEL_DIR` | `./model` | Directory path containing model weights and tokenizers |
+|---|---|---|
+| `PORT` | `8000` | Port on which FastAPI / Uvicorn binds |
+| `CORS_ORIGINS` | `*` | Comma-separated list of allowed origins |
+| `MODEL_DIR` | `./model` | Directory path containing model weights and tokenizer configs |
 | `HF_MODEL_REPO` | *(optional)* | Hugging Face repository to pull weights from if not present locally |
-| `MODEL_DOWNLOAD_URL` | *(optional)* | Remote URL to download weights from if not present locally |
+| `MODEL_DOWNLOAD_URL` | *(optional)* | Remote HTTPS URL to download weights from if not present locally |
 
 ---
 
-## Local Development
+## Running with Docker
+
+### Build the Image
+```bash
+docker build -t responde-ml .
+```
+
+### Run Container
+```bash
+docker run -d \
+  --name responde-ml \
+  --restart unless-stopped \
+  -p 127.0.0.1:8000:8000 \
+  responde-ml
+```
+
+---
+
+## Local Development (Without Docker)
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-uvicorn app:app --host 0.0.0.0 --port 8080 --reload
+
+# 2. Start development server
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
