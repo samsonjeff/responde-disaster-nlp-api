@@ -56,7 +56,6 @@ VAL_FILE   = DATASETS / "val.jsonl"
 
 INTENT_LABELS = sorted([
     "CASUAL_OR_GREETING",
-    "CASUALTY_REPORT",
     "EMERGENCY_REPORT",
     "FEEDBACK_OR_THANKS",
     "OTHER",
