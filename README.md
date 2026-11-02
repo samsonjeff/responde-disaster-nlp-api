@@ -57,9 +57,9 @@ The active production inference server is hosted on a containerized DigitalOcean
   "intent": "EMERGENCY_REPORT",
   "urgency": "CRITICAL",
   "incident_type": "fire",
-  "intent_confidence": 0.9821,
-  "urgency_confidence": 0.8743,
-  "incident_type_confidence": 0.9612,
+  "intent_confidence": 0.7975,
+  "urgency_confidence": 0.7188,
+  "incident_type_confidence": 0.8223,
   "needs_review": false,
   "low_confidence_fields": [],
   "barangay": "Banga",
@@ -69,52 +69,57 @@ The active production inference server is hosted on a containerized DigitalOcean
 
 ---
 
-## Model Benchmark & Evaluation Proof (v3 — October 30, 2026)
+## Model Benchmark & Evaluation Proof (v5 — November 2026)
 
-The v3 model (`v3-OCT302026`) was trained and evaluated following manual data relabeling and conflict resolution across Talisay, Batangas disaster reports. `CASUALTY_REPORT` was merged into `EMERGENCY_REPORT` to eliminate task ambiguity.
+The **v5 model** (`Version5_nlp_model`) expands incident classification to **8 classes** (introducing `general` alongside specific natural disasters and `none`), while retaining **6 intent classes** and **4 urgency classes**.
 
-The model was evaluated against **103 held-out test samples** (stratified across all disaster categories and intents with zero data leakage):
+The model was evaluated against **103 held-out test samples** (`datasets/test.jsonl`, stratified across all disaster categories and intents with zero data leakage):
 
-### Summary Metrics
+### Overall Multi-Task Averages (Combined Across All 3 Heads)
 
-| Task | Number of Classes | Accuracy | Macro F1 | Weighted F1 | Avg Confidence |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Incident Type** | 7 | **89.3%** | **89.6%** | **89.2%** | 75.5% |
-| **Intent** | 6 | **76.7%** | **79.5%** | **76.8%** | 77.8% |
-| **Urgency** | 4 | **72.8%** | **65.8%** | **72.9%** | 75.5% |
+| Metric | Intent (6 classes) | Urgency (4 classes) | Incident Type (8 classes) | **Overall Average** |
+|---|:---:|:---:|:---:|:---:|
+| **Accuracy** | **78.6%** (81/103) | **76.7%** (79/103) | **78.6%** (81/103) | **78.0%** |
+| **Macro F1-Score** | **80.4%** | **71.1%** | **82.9%** | **78.1%** |
+| **Macro Precision** | 81.0% | 71.4% | 85.1% | **79.2%** |
+| **Macro Recall** | 80.5% | 70.8% | 84.2% | **78.5%** |
+| **Weighted F1-Score** | 78.5% | 76.7% | 77.5% | **77.6%** |
+| **Mean Confidence (Correct)** | 82.1% | 78.2% | 73.9% | **78.1%** |
+| **Mean Confidence (Incorrect)** | 61.2% | 70.6% | 63.7% | **65.2%** |
 
 ---
 
 ### Detailed Task Breakdown
 
-#### 1. Incident Type Classification (`89.6%` Macro F1)
+#### 1. Incident Type Classification (`82.9%` Macro F1 | `78.6%` Accuracy)
 | Class | Precision | Recall | F1-Score | Support |
 |---|:---:|:---:|:---:|:---:|
 | `fire` | **1.000** | **1.000** | **1.000** | 8 |
 | `landslide` | 0.889 | **1.000** | **0.941** | 8 |
-| `none` | 0.907 | 0.886 | **0.897** | 44 |
-| `volcanic_eruption` | 0.875 | 0.875 | **0.875** | 8 |
-| `flood` | 0.909 | 0.833 | **0.870** | 12 |
-| `typhoon` | 0.765 | **1.000** | **0.867** | 13 |
+| `typhoon` | 0.857 | 0.923 | **0.889** | 13 |
+| `volcanic_eruption` | 0.800 | **1.000** | **0.889** | 8 |
 | `earthquake` | **1.000** | 0.700 | **0.824** | 10 |
+| `flood` | 0.900 | 0.750 | **0.818** | 12 |
+| `none` | 0.594 | 0.950 | **0.731** | 20 |
+| `general` | 0.769 | 0.417 | **0.541** | 24 |
 
-#### 2. Intent Classification (`79.5%` Macro F1)
+#### 2. Intent Classification (`80.4%` Macro F1 | `78.6%` Accuracy)
 | Class | Precision | Recall | F1-Score | Support |
 |---|:---:|:---:|:---:|:---:|
 | `FEEDBACK_OR_THANKS` | **1.000** | **1.000** | **1.000** | 4 |
-| `STATUS_INQUIRY` | **1.000** | 0.818 | **0.900** | 11 |
-| `EMERGENCY_REPORT` | 0.800 | 0.833 | **0.816** | 48 |
+| `STATUS_INQUIRY` | 0.900 | 0.818 | **0.857** | 11 |
+| `EMERGENCY_REPORT` | 0.837 | 0.854 | **0.845** | 48 |
 | `CASUAL_OR_GREETING` | 0.800 | 0.800 | **0.800** | 5 |
+| `OTHER` | 0.611 | 0.786 | **0.688** | 14 |
 | `RESOURCE_REQUEST` | 0.706 | 0.571 | **0.632** | 21 |
-| `OTHER` | 0.556 | 0.714 | **0.625** | 14 |
 
-#### 3. Urgency Classification (`72.9%` Weighted F1)
+#### 3. Urgency Classification (`71.1%` Macro F1 | `76.7%` Accuracy)
 | Class | Precision | Recall | F1-Score | Support |
 |---|:---:|:---:|:---:|:---:|
-| `CRITICAL` | **0.923** | 0.667 | **0.774** | 18 |
-| `HIGH` | 0.761 | 0.795 | **0.778** | 44 |
-| `LOW` | 0.714 | 0.781 | **0.746** | 32 |
-| `MEDIUM` | 0.333 | 0.333 | **0.333** | 9 |
+| `CRITICAL` | **0.824** | 0.778 | **0.800** | 18 |
+| `LOW` | 0.788 | 0.812 | **0.800** | 32 |
+| `HIGH` | 0.795 | 0.795 | **0.795** | 44 |
+| `MEDIUM` | 0.444 | 0.444 | **0.444** | 9 |
 
 ---
 
@@ -122,14 +127,14 @@ The model was evaluated against **103 held-out test samples** (stratified across
 
 | Sample Input Message | Predicted Intent | Predicted Urgency | Predicted Incident |
 |---|---|---|---|
-| *"Tulong po! Baha na hanggang bubong dito sa Barangay Aya, may matanda at bata kaming kasama!"* | `EMERGENCY_REPORT` (87.6%) | `HIGH` (54.4%) | `flood` (85.5%) |
-| *"Kailangan po namin ng food supply at malinis na tubig dine sa evacuation center ng Brgy Tranca"* | `RESOURCE_REQUEST` (93.7%) | `MEDIUM` (80.0%) | `none` (77.2%) |
-| *"May malaking sunog po dine sa Purok 3 ng Brgy Tumaway! Mabilis kumakalat ang apoy!"* | `EMERGENCY_REPORT` (83.8%) | `CRITICAL` (68.2%) | `fire` (84.4%) |
-| *"Signal No. 3 na po ba sa Talisay? Passable pa po ba ang kalsada sa Sampaloc?"* | `STATUS_INQUIRY` (88.3%) | `LOW` (65.8%) | `typhoon` (48.4%) |
-| *"Salamat po sa MDRRMO at sa mga linemen na nag-ayos ng kuryente namin dito sa Pob 7"* | `FEEDBACK_OR_THANKS` (89.0%) | `LOW` (91.3%) | `none` (86.5%) |
-| *"opo tama po yan"* | `OTHER` (87.7%) | `LOW` (94.8%) | `none` (93.7%) |
-| *"May naipit po sa gumuhong lupa dito sa Brgy Caloocan kailangan ng rescue agad!"* | `EMERGENCY_REPORT` (90.3%) | `CRITICAL` (88.4%) | `landslide` (68.4%) |
-| *"Sobrang kapal na po ng ashfall at amoy asupre dine sa Brgy San Guillermo, hirap huminga ang mga bata"* | `EMERGENCY_REPORT` (75.6%) | `HIGH` (68.8%) | `volcanic_eruption` (87.2%) |
+| *"Tulong po! Baha na hanggang bubong dito sa Barangay Aya, may matanda at bata kaming kasama!"* | `EMERGENCY_REPORT` (85.5%) | `CRITICAL` (80.0%) | `flood` (81.1%) |
+| *"Kailangan po namin ng food supply at malinis na tubig dine sa evacuation center ng Brgy Tranca"* | `RESOURCE_REQUEST` (94.4%) | `MEDIUM` (86.1%) | `none` (75.6%) |
+| *"May malaking sunog po dine sa Purok 3 ng Brgy Tumaway! Mabilis kumakalat ang apoy!"* | `EMERGENCY_REPORT` (78.5%) | `CRITICAL` (71.8%) | `fire` (82.7%) |
+| *"Signal No. 3 na po ba sa Talisay? Passable pa po ba ang kalsada sa Sampaloc?"* | `STATUS_INQUIRY` (90.9%) | `LOW` (65.1%) | `typhoon` (29.5%) |
+| *"Salamat po sa MDRRMO at sa mga linemen na nag-ayos ng kuryente namin dito sa Pob 7"* | `FEEDBACK_OR_THANKS` (89.7%) | `LOW` (91.9%) | `none` (85.4%) |
+| *"opo tama po yan"* | `OTHER` (87.1%) | `LOW` (96.9%) | `none` (90.4%) |
+| *"May naipit po sa gumuhong lupa dito sa Brgy Caloocan kailangan ng rescue agad!"* | `EMERGENCY_REPORT` (87.0%) | `CRITICAL` (80.9%) | `landslide` (74.4%) |
+| *"Sobrang kapal na po ng ashfall at amoy asupre dine sa Brgy San Guillermo, hirap huminga ang mga bata"* | `EMERGENCY_REPORT` (73.0%) | `HIGH` (77.7%) | `volcanic_eruption` (84.7%) |
 
 ---
 

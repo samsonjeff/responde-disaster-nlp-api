@@ -139,14 +139,42 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
+    intent_labels = INTENT_LABELS
+    urgency_labels = URGENCY_LABELS
+    incident_labels = INCIDENT_LABELS
+
+    label_map_file = MODEL_DIR / "label_maps.json"
+    if label_map_file.exists():
+        try:
+            with open(label_map_file, encoding="utf-8") as f:
+                lm = json.load(f)
+                if "intent" in lm and "id2label" in lm["intent"]:
+                    intent_labels = [lm["intent"]["id2label"][str(i)] for i in range(len(lm["intent"]["id2label"]))]
+                elif "id2intent" in lm:
+                    intent_labels = [lm["id2intent"][str(i)] for i in range(len(lm["id2intent"]))]
+
+                if "urgency" in lm and "id2label" in lm["urgency"]:
+                    urgency_labels = [lm["urgency"]["id2label"][str(i)] for i in range(len(lm["urgency"]["id2label"]))]
+                elif "id2urgency" in lm:
+                    urgency_labels = [lm["id2urgency"][str(i)] for i in range(len(lm["id2urgency"]))]
+
+                if "incident_type" in lm and "id2label" in lm["incident_type"]:
+                    incident_labels = [lm["incident_type"]["id2label"][str(i)] for i in range(len(lm["incident_type"]["id2label"]))]
+                elif "id2incident" in lm:
+                    incident_labels = [lm["id2incident"][str(i)] for i in range(len(lm["id2incident"]))]
+
+                print(f"Loaded label_maps.json: {len(intent_labels)} intents, {len(urgency_labels)} urgencies, {len(incident_labels)} incident types.")
+        except Exception as e:
+            print(f"Warning: could not parse label_maps.json ({e}), using default labels.")
+
     print("Loading model...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
     config    = AutoConfig.from_pretrained(MODEL_DIR)
     model     = MultiTaskRoberta.from_pretrained(
         MODEL_DIR, config=config,
-        n_intent   = len(INTENT_LABELS),
-        n_urgency  = len(URGENCY_LABELS),
-        n_incident = len(INCIDENT_LABELS),
+        n_intent   = len(intent_labels),
+        n_urgency  = len(urgency_labels),
+        n_incident = len(incident_labels),
         ignore_mismatched_sizes=True,
     ).to(device)
     model.eval()
@@ -194,9 +222,9 @@ def main():
             conf_incident.extend(c_inc.cpu().tolist())
 
     tasks = [
-        ("INTENT CLASSIFICATION", all_intent, pred_intent, conf_intent, INTENT_LABELS),
-        ("URGENCY CLASSIFICATION", all_urgency, pred_urgency, conf_urgency, URGENCY_LABELS),
-        ("INCIDENT TYPE CLASSIFICATION", all_incident, pred_incident, conf_incident, INCIDENT_LABELS),
+        ("INTENT CLASSIFICATION", all_intent, pred_intent, conf_intent, intent_labels),
+        ("URGENCY CLASSIFICATION", all_urgency, pred_urgency, conf_urgency, urgency_labels),
+        ("INCIDENT TYPE CLASSIFICATION", all_incident, pred_incident, conf_incident, incident_labels),
     ]
 
     # 1. Classification Reports

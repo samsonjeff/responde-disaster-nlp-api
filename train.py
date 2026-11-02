@@ -1,11 +1,11 @@
-﻿"""
+"""
 train.py
 
 Fine-tunes jcblaise/roberta-tagalog on the Responde disaster-response dataset.
 Uses a single shared RoBERTa encoder with three independent classification heads:
     - intent       (7 classes)
     - urgency      (4 classes)
-    - incident_type (7 classes)
+    - incident_type (8 classes)
 
 The combined loss is the sum of three class-weighted cross-entropy losses.
 Best checkpoint (by macro-averaged val F1 across all 3 tasks) is saved to ml/model/.
@@ -69,6 +69,7 @@ INCIDENT_LABELS = sorted([
     "earthquake",
     "fire",
     "flood",
+    "general",
     "landslide",
     "none",
     "typhoon",

@@ -229,14 +229,14 @@ def classify(req: ClassifyRequest):
     enc = _tokenizer(
         text,
         max_length=128,
-        padding="max_length",
+        padding=True,
         truncation=True,
         return_tensors="pt",
     )
     input_ids      = enc["input_ids"].to(_device)
     attention_mask = enc["attention_mask"].to(_device)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         _, li, lu, linc = _model(input_ids, attention_mask)
 
     pi   = F.softmax(li,   dim=1).squeeze(0)
