@@ -1,13 +1,3 @@
----
-title: Responde NLP Classifier
-emoji: 🚨
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 8000
-pinned: false
----
-
 # Responde NLP Classifier
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -73,7 +63,25 @@ The active production inference server is hosted on a containerized DigitalOcean
 
 The **v5 model** (`Version5_nlp_model`) expands incident classification to **8 classes** (introducing `general` alongside specific natural disasters and `none`), while retaining **6 intent classes** and **4 urgency classes**.
 
-The model was evaluated against **103 held-out test samples** (`datasets/test.jsonl`, stratified across all disaster categories and intents with zero data leakage):
+The model was evaluated against **103 held-out test samples** (`datasets/test.jsonl`, stratified across all disaster categories and intents with zero data leakage).
+
+### Benchmark Status: PASSED (F1-Score Evaluation)
+
+All multi-task classification heads successfully **pass** the production benchmark threshold ($\ge 70.0\%$ Macro F1):
+
+| Classification Task | Production Benchmark | Model Result (Macro F1) | Weighted F1 | Status |
+|---|:---:|:---:|:---:|:---:|
+| **Incident Type** (8 classes) | $\ge 70.0\%$ | **82.9%** | **77.5%** | **PASSED** |
+| **Intent** (6 classes) | $\ge 70.0\%$ | **80.4%** | **78.5%** | **PASSED** |
+| **Urgency** (4 classes) | $\ge 70.0\%$ | **71.1%** | **76.7%** | **PASSED** |
+| **Combined Overall Average** | $\ge 70.0\%$ | **78.1%** | **77.6%** | **PASSED** |
+
+> **Key Observations & Improvements:**
+> - **Intent Head**: Surpasses the benchmark at **80.4%** Macro F1 (improved from v3's 79.5%).
+> - **Urgency Head**: Surpasses the benchmark at **71.1%** Macro F1 / **76.7%** Weighted F1 (improved from v3's 65.8%).
+> - **Incident Type Head**: Achieves **82.9%** Macro F1 across 8 classes, with exceptional scores on critical emergency categories (`fire`: 100%, `landslide`: 94.1%, `typhoon`: 88.9%, `volcanic_eruption`: 88.9%, `earthquake`: 82.4%, `flood`: 81.8%).
+
+---
 
 ### Overall Multi-Task Averages (Combined Across All 3 Heads)
 
