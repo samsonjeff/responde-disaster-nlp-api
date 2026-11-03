@@ -71,6 +71,60 @@ BARANGAY_ALIASES = {
     "san guillermo": "San Guillermo",
 }
 
+POB_NUMWORDS = {
+    "dos": "2",
+    "tres": "3",
+    "kwatro": "4",
+    "singko": "5",
+    "sais": "6",
+    "syete": "7",
+    "otso": "8",
+}
+POB_PREP = r"(?:nasa|taga|dito\s+sa|sa)"
+POB_LEFT = r"(?:^|[\s,.;:!?()\"'\-])"
+POB_NUMWORD_RE = re.compile(
+    rf"{POB_LEFT}{POB_PREP}\s+(dos|tres|kwatro|singko|sais|syete|otso)\b",
+    re.IGNORECASE,
+)
+POB_DIGIT_RE = re.compile(
+    rf"{POB_LEFT}{POB_PREP}\s+([2-8])\b",
+    re.IGNORECASE,
+)
+POB_TIME_AFTER_RE = re.compile(
+    r"^\s*ng\s+(hapon|gabi|umaga|tanghali|madaling\s+araw|araw)",
+    re.IGNORECASE,
+)
+POB_COUNT_AFTER_RE = re.compile(
+    r"^\s+(?:mga\s+)?(?:tao|taong|pamilya|pamilyang|katao|bata|matanda|bangka|bahay|kabahayan|sako|kahon|piraso|pirasong|oras|minuto|minutong|araw|linggo|buwan|taon|beses|piso)",
+    re.IGNORECASE,
+)
+POB_CONTEXT_RE = re.compile(
+    r"(poblacion|\bpob\b|pob\.|brgy|barangay)",
+    re.IGNORECASE,
+)
+
+
+def detect_poblacion_number(text: str) -> Optional[str]:
+    """Detect Poblacion number shorthand ('sa dos' -> Poblacion Barangay 2)."""
+    if not text:
+        return None
+    patterns = [POB_NUMWORD_RE]
+    if POB_CONTEXT_RE.search(text):
+        patterns.append(POB_DIGIT_RE)
+    for pattern in patterns:
+        for m in pattern.finditer(text):
+            after = text[m.end():]
+            if POB_TIME_AFTER_RE.search(after):
+                continue
+            if POB_COUNT_AFTER_RE.search(after):
+                continue
+            word = m.group(1).lower()
+            digit = POB_NUMWORDS.get(word) or (word if word in "2345678" else None)
+            if digit:
+                return f"Poblacion Barangay {digit}"
+    return None
+
+
 CONTACT_REGEX = re.compile(
     r'(?:'
     r'(?:\+63|0)\s*9\d{2}[\s\-]?\d{3}[\s\-]?\d{4}'
@@ -90,6 +144,9 @@ def detect_barangay(text: str) -> Optional[str]:
     for alias, canonical in sorted(BARANGAY_ALIASES.items(), key=lambda x: -len(x[0])):
         if alias in lower:
             return canonical
+    pob_num = detect_poblacion_number(text)
+    if pob_num:
+        return pob_num
     for brgy in sorted(BARANGAYS, key=lambda x: -len(x)):
         if brgy.lower() in lower:
             return brgy
