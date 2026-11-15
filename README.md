@@ -178,7 +178,7 @@ The microservice runs in an optimized CPU-only PyTorch container:
 
 Because model weight files (`model.safetensors`, ~416 MB) exceed GitHub's standard file size limits, the trained weights are excluded from Git and hosted publicly on Hugging Face:
 
-🤗 **Hugging Face Model Repository**: [`samsonjeff/responde-tagalog-disaster-triage`](https://huggingface.co/samsonjeff/responde-tagalog-disaster-triage)
+**Hugging Face Model Repository**: [`samsonjeff/responde-tagalog-disaster-triage`](https://huggingface.co/samsonjeff/responde-tagalog-disaster-triage)
 
 ### Downloading the Weights for Local Run / Self-Hosting
 
