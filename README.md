@@ -174,6 +174,29 @@ The microservice runs in an optimized CPU-only PyTorch container:
 
 ---
 
+## Pre-trained Model Weights
+
+Because model weight files (`model.safetensors`, ~416 MB) exceed GitHub's standard file size limits, the trained weights are excluded from Git and hosted publicly on Hugging Face:
+
+🤗 **Hugging Face Model Repository**: [`samsonjeff/responde-tagalog-disaster-triage`](https://huggingface.co/samsonjeff/responde-tagalog-disaster-triage)
+
+### Downloading the Weights for Local Run / Self-Hosting
+
+You can pull the weights into the `./model` folder using the Hugging Face CLI:
+
+```bash
+# Download model repository into the model/ folder
+hf download samsonjeff/responde-tagalog-disaster-triage --local-dir ./model
+```
+
+Alternatively, set the environment variable:
+```bash
+HF_MODEL_REPO=samsonjeff/responde-tagalog-disaster-triage
+```
+The server will automatically pull the weights on startup if `./model` is empty.
+
+---
+
 ## Running with Docker
 
 ### Build the Image
